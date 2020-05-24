@@ -1,2 +1,7 @@
 data
 .idea
+segmentation
+LibriSpeech-Alignments
+test.flac
+test_seg.txt
+test.txt
