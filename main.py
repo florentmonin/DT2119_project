@@ -11,13 +11,17 @@ def load_from_path(path):
     :param path: The location of the TextGrid files
     :return: #TODO
     """
-    data = []
-    for root, dirs, files in os.walk(TRAIN_DATA):
+    models = {}
+    for root, dirs, files in os.walk(path):
         for file in tqdm(files):
-            if file.endswith('.wav'):
-                pass
-                # TODO
-    return np.array(data)
+            if file.endswith('.txt'):
+                name_file = os.path.join(root, file)
+                with open(name_file, 'r') as f:
+                    for line in f.readlines():
+                        id_temp, dict_temp = read_a_line(line)
+                        models[id_temp] = dict_temp
+
+    return models
 
 
 def read_a_line(line):
@@ -45,8 +49,6 @@ def read_a_line(line):
     return id, word_dict
 
 
-models = {}
-with open("test_seg.txt", 'r') as f:
-    for line in f.readlines():
-        id_temp, dict_temp = read_a_line(line)
-        models[id_temp] = dict_temp
+PATH = "segmentation"
+segmentations = load_from_path(PATH)
+print(segmentations)
