@@ -5,7 +5,4 @@ import re
 
 TRAIN_DATA = "data/train-others-500"
 
-
-
-
 PATH = "segmentation"
