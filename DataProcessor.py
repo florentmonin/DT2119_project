@@ -52,6 +52,8 @@ class DataProcessor:
         # A dictionary indicating for each word a list of audio positions where this word in uttered
         self.feature_dim = 40
         # Trust us, see implementation of mspec
+        self.context_size = 3
+        # The right and left context size (So the total window length is 2*self.context_size)
 
         self.load_alignment()
         if preprocessed_data in os.listdir():
@@ -127,32 +129,48 @@ class DataProcessor:
             self.audio[i] = np.array(self.audio[i])
 
     def load_from_file(self, preprocessed_data):
+        """Loads the features and the targets in self.audio and self.targets respectively
+        :param preprocessed_data: The name of the .npz file where the data is stored
         """
-        TODO
-        :param preprocessed_data:
-        :return:
-        """
-        self.audio = np.load(preprocessed_data+".npz", allow_pickle=True)['audio_data']
+        tmp = np.load(preprocessed_data+".npz", allow_pickle=True)
+        self.audio = tmp['audio_features']
+        self.targets = tmp['audio_targets']
 
     def save_to_file(self, preprocessed_data):
+        """Saves to the disk the features and the targets
+        :param preprocessed_data: The name of thr .npz where the data will be stored
         """
-        TODO
-        :param preprocessed_data:
-        :return:
-        """
-        np.savez(preprocessed_data, audio_data=self.audio)
+        np.savez_compressed(preprocessed_data, audio_features=self.audio, audio_targets=self.targets)
 
     def compute_targets(self):
+        """Computes the target contexts for each word in self.audio
+        Populates self.targets with a list of 2D arrays of shape
+            (self.context_size*2*self.AUDIO_MAX_SIZE, self.feature_dim)
+        The context is constituted of the surrounding words (self.context_size words to the left, the same to the right)
+        When at the boundary, fill with zeros
         """
-        TODO
-        :return:
-        """
-        pass
+        for file in self.audio:
+            n = len(file)
+            for i in range(n):
+                context = []
+                # Left context
+                while len(context) + i < self.context_size:
+                    context.append(np.zeros((self.AUDIO_MAX_SIZE, self.feature_dim)))
+                for t in range(self.context_size - len(context), 0, -1):
+                    context.append(file[i-t])
+                # Right context
+                for t in range(1, min(self.context_size, n-i)):
+                    context.append(file[i+t])
+                while len(context) < 2*self.context_size:
+                    context.append(np.zeros((self.AUDIO_MAX_SIZE, self.feature_dim)))
+                self.targets.append(np.concatenate(context))
 
     def flatten(self):
-        """Flattens self.audio to a 3D numpy array
-        TODO
-        :return:
+        """Flattens self.audio and self.targets to 3D numpy arrays
         """
-        pass
+        self.targets = np.array(self.targets, dtype='float32')
+        tmp = []
+        for file in self.audio:
+            tmp += file
+        self.audio = np.array(tmp, dtype='float32')
 
