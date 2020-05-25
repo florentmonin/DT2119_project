@@ -1,8 +1,3 @@
-import numpy as np
-from tqdm import tqdm
-import os
-import re
+import DataProcessor as dp
 
-TRAIN_DATA = "data/train-others-500"
-
-PATH = "segmentation"
+dataprocessor = dp.DataProcessor(r"segmentation", r"data\train-clean-500", "train_data")

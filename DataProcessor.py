@@ -5,6 +5,7 @@ import numpy as np
 from collections import defaultdict
 from lab1_proto import *
 import soundfile
+import time
 
 
 def read_a_line(line):
@@ -25,8 +26,24 @@ def read_a_line(line):
         word = words[commas_index[i] + 1: commas_index[i + 1]]
         if word != '':
             words_list.append(word)
-            times_list.append((times[i], times[i + 1]))
+            times_list.append((float(times[i]), float(times[i + 1])))
     return id, words_list, times_list
+
+
+def log(message, file="log.log", reinit=False):
+    """ Writes message in the file file
+    If reinit, reinitialise the file
+    :param message: Message to be printed in the log file
+    :param file: File where the message is printed
+    :param reinit: reinitialise the file if True
+    :return:
+    """
+    if reinit:
+        with open(file, "w+") as f:
+            f.write(f"{time.asctime()} : {message} \n")
+    else:
+        with open(file, "a") as f:
+            f.write(f"{time.asctime()} : {message} \n")
 
 
 class DataProcessor:
@@ -55,15 +72,29 @@ class DataProcessor:
         self.context_size = 3
         # The right and left context size (So the total window length is 2*self.context_size)
 
+        log("Loading the alignment...", reinit=True)
         self.load_alignment()
+        log("Alignment loaded")
         if preprocessed_data in os.listdir():
+            log("Loading preprocessed data from file...")
             self.load_from_file(preprocessed_data)
+            log("Preprocessed data loaded from file")
         else:
+            log("Preprocessing data: loading audio...")
             self.load_audio()
+            log("Preprocessing data: audio loaded")
+            log("Preprocessing data: padding audio...")
             self.pad()
+            log("Preprocessing data: audio padded")
+            log("Preprocessing data: computing targets...")
             self.compute_targets()
+            log("Preprocessing data: targets computed")
+            log("Preprocessing data: flattening the data...")
             self.flatten()
+            log("Preprocessing data: data flattened")
+            log("Preprocessing data: saving data to file...")
             self.save_to_file(preprocessed_data)
+            log("Preprocessing data: data saved to file")
 
     def load_alignment(self):
         """Loads the forced alignment data
@@ -96,25 +127,30 @@ class DataProcessor:
 
     def process_audio(self, id, name_file):
         """Processes one audio file
-        Cuts it into words, and populates self.audio, self.a2w and self.w2a
+        Cuts it into words, and populates self.a2w and self.w2a
         :param id: The id of the current audio file we're in
         Is used to get the forced alignment data
         :param name_file: The path to the file to process
         :return: A list of 2D arrays corresponding to the words of the file name_file
         If there is no alignment data for this file, returns an empty list
         """
-        x, y = len(self.audio), len(self.audio[-1])
+        try:
+            x, y = len(self.audio), len(self.audio[-1])
+        except IndexError:
+            x, y = 0, 0
         data, sample_rate = soundfile.read(name_file)
         try:
+            tmp = []
             words, times = self.models[id]
             for index, timestamp in enumerate(times):
                 start, end = timestamp
-                word_audio = data[int(start*sample_rate):int(end*sample_rate)]
+                word_audio = data[int(start * sample_rate):int(end * sample_rate)]
                 feature_matrix = mspec(word_audio).astype('float32')
-                self.audio[-1].append(feature_matrix)
+                tmp.append(feature_matrix)
                 self.AUDIO_MAX_SIZE = max(self.AUDIO_MAX_SIZE, feature_matrix.shape[0])
                 self.a2w[(x, y)] = words[index]
                 self.w2a[words[index]] += [(x, y)]
+            return tmp
         except KeyError:
             return []
 
@@ -132,7 +168,7 @@ class DataProcessor:
         """Loads the features and the targets in self.audio and self.targets respectively
         :param preprocessed_data: The name of the .npz file where the data is stored
         """
-        tmp = np.load(preprocessed_data+".npz", allow_pickle=True)
+        tmp = np.load(preprocessed_data + ".npz", allow_pickle=True)
         self.audio = tmp['audio_features']
         self.targets = tmp['audio_targets']
 
@@ -157,20 +193,16 @@ class DataProcessor:
                 while len(context) + i < self.context_size:
                     context.append(np.zeros((self.AUDIO_MAX_SIZE, self.feature_dim)))
                 for t in range(self.context_size - len(context), 0, -1):
-                    context.append(file[i-t])
+                    context.append(file[i - t])
                 # Right context
-                for t in range(1, min(self.context_size, n-i)):
-                    context.append(file[i+t])
-                while len(context) < 2*self.context_size:
+                for t in range(1, min(self.context_size, n - i)):
+                    context.append(file[i + t])
+                while len(context) < 2 * self.context_size:
                     context.append(np.zeros((self.AUDIO_MAX_SIZE, self.feature_dim)))
                 self.targets.append(np.concatenate(context))
 
     def flatten(self):
         """Flattens self.audio and self.targets to 3D numpy arrays
         """
-        self.targets = np.array(self.targets, dtype='float32')
-        tmp = []
-        for file in self.audio:
-            tmp += file
-        self.audio = np.array(tmp, dtype='float32')
-
+        self.targets = np.array(self.targets).astype('float32')
+        self.audio = np.concatenate(self.audio).astype('float32')
