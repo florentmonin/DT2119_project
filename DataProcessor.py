@@ -71,11 +71,13 @@ class DataProcessor:
         # Trust us, see implementation of mspec
         self.context_size = 3
         # The right and left context size (So the total window length is 2*self.context_size)
+        self.number_processed_word = 0
+        # The number of processed word we are in
 
         log("Loading the alignment...", reinit=True)
         self.load_alignment()
         log("Alignment loaded")
-        if preprocessed_data in os.listdir():
+        if preprocessed_data + ".npz" in os.listdir():
             log("Loading preprocessed data from file...")
             self.load_from_file(preprocessed_data)
             log("Preprocessed data loaded from file")
@@ -134,10 +136,6 @@ class DataProcessor:
         :return: A list of 2D arrays corresponding to the words of the file name_file
         If there is no alignment data for this file, returns an empty list
         """
-        try:
-            x, y = len(self.audio), len(self.audio[-1])
-        except IndexError:
-            x, y = 0, 0
         data, sample_rate = soundfile.read(name_file)
         try:
             tmp = []
@@ -148,8 +146,9 @@ class DataProcessor:
                 feature_matrix = mspec(word_audio).astype('float32')
                 tmp.append(feature_matrix)
                 self.AUDIO_MAX_SIZE = max(self.AUDIO_MAX_SIZE, feature_matrix.shape[0])
-                self.a2w[(x, y)] = words[index]
-                self.w2a[words[index]] += [(x, y)]
+                self.a2w[self.number_processed_word] = words[index]
+                self.w2a[words[index]] += [self.number_processed_word]
+                self.number_processed_word += 1
             return tmp
         except KeyError:
             return []
@@ -171,12 +170,15 @@ class DataProcessor:
         tmp = np.load(preprocessed_data + ".npz", allow_pickle=True)
         self.audio = tmp['audio_features']
         self.targets = tmp['audio_targets']
+        self.w2a = tmp['w2a'].item()
+        self.a2w = tmp['a2w'].item()
 
     def save_to_file(self, preprocessed_data):
         """Saves to the disk the features and the targets
         :param preprocessed_data: The name of thr .npz where the data will be stored
         """
-        np.savez_compressed(preprocessed_data, audio_features=self.audio, audio_targets=self.targets)
+        np.savez_compressed(preprocessed_data, audio_features=self.audio, audio_targets=self.targets,
+                            a2w = self.a2w, w2a = self.w2a)
 
     def compute_targets(self):
         """Computes the target contexts for each word in self.audio
