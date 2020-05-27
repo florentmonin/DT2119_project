@@ -1,3 +1,3 @@
 import DataProcessor as dp
 
-dataprocessor = dp.DataProcessor(r"segmentation", r"data\train-clean-500", "train_data")
+dataprocessor = dp.DataProcessor(r"light_segmentation", r"data/ligh_data", "train_data")

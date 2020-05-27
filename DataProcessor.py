@@ -6,7 +6,7 @@ from collections import defaultdict
 from lab1_proto import *
 import soundfile
 import time
-
+from sklearn.preprocessing import StandardScaler
 
 def read_a_line(line):
     """Reads a line from a TextGrid file and transforms it in a usable dict of timestamps
@@ -26,7 +26,7 @@ def read_a_line(line):
         word = words[commas_index[i] + 1: commas_index[i + 1]]
         if word != '':
             words_list.append(word)
-            times_list.append((float(times[i]), float(times[i + 1])))
+            times_list.append((float(times[i]), float(times[i + 1])))       
     return id, words_list, times_list
 
 
@@ -107,9 +107,13 @@ class DataProcessor:
                 if file.endswith('.txt'):
                     name_file = os.path.join(root, file)
                     with open(name_file, 'r') as f:
-                        for line in f.readlines():
-                            id_temp, words_temp, times_temp = read_a_line(line)
-                            self.models[id_temp] = (words_temp, times_temp)
+                        for line in f:
+                            try:
+                                id_temp, words_temp, times_temp = read_a_line(line)
+                                self.models[id_temp] = (words_temp, times_temp)
+                            except IndexError as e:
+                                log(f"Error while loading line {line}")
+                                log(e)
 
     def load_audio(self):
         """Loads the audio files in self.audio
@@ -118,6 +122,7 @@ class DataProcessor:
         and within the same context
         """
         for speaker in os.scandir(self.audio_path):
+            print(speaker)
             for dir in os.scandir(speaker):
                 tmp = []
                 for audio_file in os.listdir(dir):
@@ -126,6 +131,7 @@ class DataProcessor:
                         id = audio_file[:-5]  # 19-198-0000
                         tmp += self.process_audio(id, name_file)
                 self.audio.append(tmp)
+        np.savez_compressed("mspec", feature = self.audio, w2a = self.w2a, a2w = self.a2w)
 
     def process_audio(self, id, name_file):
         """Processes one audio file
@@ -208,3 +214,6 @@ class DataProcessor:
         """
         self.targets = np.array(self.targets).astype('float32')
         self.audio = np.concatenate(self.audio).astype('float32')
+        ss = StandardScaler()
+        ss.fit_transform(self.audio)
+        ss.transform(self.targets)

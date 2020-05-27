@@ -1,11 +1,9 @@
 # DT2119, Lab 1 Feature Extraction
 
 import numpy as np
-from sklearn.mixture import GaussianMixture
 from scipy.signal import lfilter, hamming
 from scipy.fftpack import fft
 from scipy.fftpack.realtransforms import dct
-from scipy.cluster.hierarchy import linkage,dendrogram
 from lab1_tools import *
 
 
