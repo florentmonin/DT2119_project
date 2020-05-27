@@ -8,3 +8,4 @@ test.txt
 *.npz
 __pycache__/
 *.log
+memory

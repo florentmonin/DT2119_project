@@ -4,7 +4,7 @@ import os
 
 
 class AudioDataset(Dataset):
-    def __init__(self, ids, context_size=3, path="memory/features", shape=(127, 40)):
+    def __init__(self, ids, context_size=3, path="memory/features/", shape=(127, 40)):
         self.path = path
         self.index2id = ids
         self.context_size = context_size
@@ -19,7 +19,7 @@ class AudioDataset(Dataset):
                 y.append(np.load(f'{self.path}{id}.npz')['word'])
             else:
                 y.append(np.zeros(self.shape))
-        return x, np.concatenate(y)
+        return x.astype('float32'), np.concatenate(y).astype('float32')
 
     def __len__(self):
         return len(self.index2id)
@@ -35,42 +35,48 @@ class AudioDataset(Dataset):
         context = []
         last_id = id
         for i in range(self.context_size):
-            context.append(previous_word(last_id, self.path))
+            context.append(previous_word(last_id, self.index2id))
             last_id = context[-1]
         context.reverse()
 
         last_id = id
         for i in range(self.context_size):
-            context.append(next_word(last_id, self.path))
+            context.append(next_word(last_id, self.index2id))
             last_id = context[-1]
         return context
 
 
 def next_word(id, ids):
-    speaker, excerpt, sentence, nb_word = id.split("-")
-    i = np.where(ids == id)[0]
-    if i == len(ids) - 1:
-        # last word
+    if id is None:
         return None
     else:
-        next_id = ids[i+1]
-        next_speaker, next_excerpt, _, _ = next_id.split("-")
-        if speaker != next_speaker or excerpt != next_excerpt:
+        speaker, excerpt, sentence, nb_word = id.split("-")
+        i = np.where(ids == id)[0][0]
+        if i == len(ids) - 1:
+            # last word
             return None
         else:
-            return next_id
+            next_id = ids[i+1]
+            next_speaker, next_excerpt, _, _ = next_id.split("-")
+            if speaker != next_speaker or excerpt != next_excerpt:
+                return None
+            else:
+                return next_id
 
 
 def previous_word(id, ids):
-    speaker, excerpt, sentence, nb_word = id.split("-")
-    i = np.where(ids == id)[0]
-    if i == 0:
-        # first word
+    if id is None:
         return None
     else:
-        previous_id = ids[i - 1]
-        previous_speaker, previous_excerpt, _, _ = previous_id.split("-")
-        if speaker != previous_speaker or excerpt != previous_excerpt:
+        speaker, excerpt, sentence, nb_word = id.split("-")
+        i = np.where(ids == id)[0][0]
+        if i == 0:
+            # first word
             return None
         else:
-            return previous_id
+            previous_id = ids[i - 1]
+            previous_speaker, previous_excerpt, _, _ = previous_id.split("-")
+            if speaker != previous_speaker or excerpt != previous_excerpt:
+                return None
+            else:
+                return previous_id

@@ -83,7 +83,7 @@ class DataProcessor:
             log("Preprocessed data loaded from file")
         else:
             log("Preprocessing data: loading audio...")
-            os.mkdir(self.MEMORY_FEATURES)
+            #os.mkdir(self.MEMORY_FEATURES)
             self.load_audio()
             log("Preprocessing data: audio loaded")
             log("Preprocessing data: padding audio...")
@@ -160,7 +160,7 @@ class DataProcessor:
         """Adds 0s at the end of the 2D matrices for each word, so that each matrix has the same shape
         """
         for file in os.listdir(self.MEMORY_FEATURES):
-            word = np.load(f"{self.MEMORY_FEATURES}{file}")
+            word = np.load(f"{self.MEMORY_FEATURES}{file}")["word"]
             padded_audio = np.zeros((self.AUDIO_MAX_SIZE, self.feature_dim), dtype='float32')
             padded_audio[:word.shape[0]] = word
             np.savez(f"{self.MEMORY_FEATURES}{file}", word=padded_audio)
@@ -173,12 +173,13 @@ class DataProcessor:
         self.w2a = tmp['w2a'].item()
         self.a2w = tmp['a2w'].item()
         self.ids = tmp['ids']
+        self.AUDIO_MAX_SIZE = tmp['max_size'].item()
 
     def save_to_file(self, preprocessed_data):
         """Saves to the disk the the information about the preprocessed data
         :param preprocessed_data: The name of the .npz where the data will be stored
         """
-        np.savez_compressed(preprocessed_data, a2w=self.a2w, w2a=self.w2a, ids=self.ids)
+        np.savez_compressed(preprocessed_data, a2w=self.a2w, w2a=self.w2a, ids=self.ids, max_size = self.AUDIO_MAX_SIZE)
 
     def normalize(self):
         """Normalizes the mspec data
@@ -186,6 +187,6 @@ class DataProcessor:
         self.mean /= self.number_processed_word
         self.std = np.sqrt(abs(self.std - self.mean ** 2))
         for file in os.listdir(self.MEMORY_FEATURES):
-            tmp = np.load(f"{self.MEMORY_FEATURES}{file}" + ".npz", allow_pickle=True)['word']
+            tmp = np.load(f"{self.MEMORY_FEATURES}{file}", allow_pickle=True)['word']
             tmp = (tmp - self.mean) / self.std
             np.savez(f"{self.MEMORY_FEATURES}{file}", word=tmp)

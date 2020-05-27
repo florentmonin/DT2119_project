@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, random_split
 
 
 class Speech2Vec(nn.Module):
-    def __init__(self, nb_frame, nb_features, embedding_size, context_size=3):
+    def __init__(self, nb_frame, nb_features, embedding_size):
         """
         Constructs a new instance of the Speech2Vec model
         :param nb_frame:        corresponds to AUDIO_MAX_SIZE in DataProcessor: max size of the padded audios
@@ -19,7 +19,6 @@ class Speech2Vec(nn.Module):
         """
 
         super(Speech2Vec, self).__init__()
-        self.CONTEXT_SIZE = context_size
         self.SEQ_LENGTH = nb_frame
         self.EMBEDDING_SIZE = embedding_size
         self.NB_FEATURES = nb_features
@@ -27,11 +26,26 @@ class Speech2Vec(nn.Module):
                                hidden_size=int(self.EMBEDDING_SIZE / 2),
                                bidirectional=True,
                                batch_first=True)
-        self.decoders = []
-        for _ in range(2 * self.CONTEXT_SIZE):
-            self.decoders.append(nn.LSTM(input_size=self.EMBEDDING_SIZE,
+
+        self.decoder1 = nn.LSTM(input_size=self.EMBEDDING_SIZE,
                                          hidden_size=self.NB_FEATURES,
-                                         batch_first=True))
+                                         batch_first=True)
+        self.decoder2 = nn.LSTM(input_size=self.EMBEDDING_SIZE,
+                                hidden_size=self.NB_FEATURES,
+                                batch_first=True)
+        self.decoder3 = nn.LSTM(input_size=self.EMBEDDING_SIZE,
+                                hidden_size=self.NB_FEATURES,
+                                batch_first=True)
+        self.decoder4 = nn.LSTM(input_size=self.EMBEDDING_SIZE,
+                                hidden_size=self.NB_FEATURES,
+                                batch_first=True)
+        self.decoder5 = nn.LSTM(input_size=self.EMBEDDING_SIZE,
+                                hidden_size=self.NB_FEATURES,
+                                batch_first=True)
+        self.decoder6 = nn.LSTM(input_size=self.EMBEDDING_SIZE,
+                                hidden_size=self.NB_FEATURES,
+                                batch_first=True)
+        self.decoders = [self.decoder1, self.decoder2, self.decoder3, self.decoder4, self.decoder5, self.decoder6]
 
     def forward(self, X):
         """
@@ -81,11 +95,7 @@ def train(model, dataset, batch_size, learning_rate=0.001, nb_epochs=500):
     train_size = int(N * 0.9)
     train_set, val_set = random_split(dataset, [train_size, N - train_size])
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, pin_memory=True)
-    val_loader = DataLoader(val_set, batch_size=N - train_size, pin_memory=True)
-
-    X_val, y_val = torch.Tensor(), torch.Tensor()
-    for X, y in val_loader:
-        X_val, y_val = X.cuda(), y.cuda()
+    val_loader = DataLoader(val_set, batch_size=batch_size, pin_memory=True)
 
     for epoch in range(nb_epochs):
 
@@ -114,7 +124,14 @@ def train(model, dataset, batch_size, learning_rate=0.001, nb_epochs=500):
                    (epoch + 1, nb_epochs, i + 1, iters, avg_loss, speed, k))
 
         model.train(False)
-        y_val_hat = model(X_val)
-        val_loss = criterion(y_val_hat, y_val).item()
-        val_losses.append(val_loss)
+
+        val_loss = 0.
+        avg_val_loss = 0.
+        for i, (X, y) in enumerate(val_loader):
+            X_val, y_val = X.cuda(), y.cuda()
+            y_val_hat = model(X_val)
+            val_loss += criterion(y_val_hat, y_val).item()
+            avg_val_loss = val_loss/(i+1)
+        val_losses.append(avg_val_loss)
+
     model.save()
