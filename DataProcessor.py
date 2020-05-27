@@ -6,7 +6,7 @@ from collections import defaultdict
 from lab1_proto import *
 import soundfile
 import time
-from sklearn.preprocessing import StandardScaler
+
 
 def read_a_line(line):
     """Reads a line from a TextGrid file and transforms it in a usable dict of timestamps
@@ -26,7 +26,7 @@ def read_a_line(line):
         word = words[commas_index[i] + 1: commas_index[i + 1]]
         if word != '':
             words_list.append(word)
-            times_list.append((float(times[i]), float(times[i + 1])))       
+            times_list.append((float(times[i]), float(times[i + 1])))
     return id, words_list, times_list
 
 
@@ -131,7 +131,7 @@ class DataProcessor:
                         id = audio_file[:-5]  # 19-198-0000
                         tmp += self.process_audio(id, name_file)
                 self.audio.append(tmp)
-        np.savez_compressed("mspec", feature = self.audio, w2a = self.w2a, a2w = self.a2w)
+        np.savez_compressed("mspec", feature=self.audio, w2a=self.w2a, a2w=self.a2w)
 
     def process_audio(self, id, name_file):
         """Processes one audio file
@@ -184,7 +184,7 @@ class DataProcessor:
         :param preprocessed_data: The name of thr .npz where the data will be stored
         """
         np.savez_compressed(preprocessed_data, audio_features=self.audio, audio_targets=self.targets,
-                            a2w = self.a2w, w2a = self.w2a)
+                            a2w=self.a2w, w2a=self.w2a)
 
     def compute_targets(self):
         """Computes the target contexts for each word in self.audio
@@ -214,6 +214,8 @@ class DataProcessor:
         """
         self.targets = np.array(self.targets).astype('float32')
         self.audio = np.concatenate(self.audio).astype('float32')
-        ss = StandardScaler()
-        ss.fit_transform(self.audio)
-        ss.transform(self.targets)
+
+        mean = self.audio.mean(axis=(0, 1))
+        std = self.audio.std(axis=(0, 1))
+        self.audio = (self.audio - mean)/std
+        self.targets = (self.targets - mean)/std
