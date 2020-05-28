@@ -28,8 +28,8 @@ class Speech2Vec(nn.Module):
                                batch_first=True)
 
         self.decoder1 = nn.LSTM(input_size=self.EMBEDDING_SIZE,
-                                         hidden_size=self.NB_FEATURES,
-                                         batch_first=True)
+                                hidden_size=self.NB_FEATURES,
+                                batch_first=True)
         self.decoder2 = nn.LSTM(input_size=self.EMBEDDING_SIZE,
                                 hidden_size=self.NB_FEATURES,
                                 batch_first=True)
@@ -65,11 +65,14 @@ class Speech2Vec(nn.Module):
             output_sequence, _ = decoder(input_decoder)
             all_outputs.append(output_sequence)
 
-        return torch.cat(all_outputs)
+        return torch.cat(all_outputs, dim=1)
 
     def save(self, SAVE_PATH):
-        torch.save(self.state_dict(), SAVE_PATH)
-        print(f"Model saved to {SAVE_PATH}.")
+        torch.save(self.state_dict(), SAVE_PATH + '.pyt')
+        print(f"Model saved to {SAVE_PATH}.pyt.")
+
+    def load(self, SAVE_PATH):
+        self.load_state_dict(torch.load(SAVE_PATH + '.pyt'))
 
 
 def stream(string, variables):
@@ -78,18 +81,21 @@ def stream(string, variables):
 
 def train(model, dataset, batch_size, learning_rate=0.001, nb_epochs=500):
     """
-    TODO
-    :param model:
-    :param dataset:
-    :param batch_size:
-    :param nb_epochs:
-    :return:
+    Trains the given model with the given dataset
+    :param learning_rate:   Learning rate
+    :param model:           Torch Speech2Vec model to be trained
+    :param dataset:         Dataset to provide for the training
+    :param batch_size:      Size of the batch
+    :param nb_epochs:       Number of epochs
+    :return:                Validation loss
     """
     criterion = nn.MSELoss().cuda()
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
     step = 0
 
     val_losses = []
+    train_losses = []
+    avg_loss = 0
 
     N = len(dataset)
     train_size = int(N * 0.9)
@@ -120,7 +126,7 @@ def train(model, dataset, batch_size, learning_rate=0.001, nb_epochs=500):
             avg_loss = running_loss / (i + 1)
             step += 1
             k = step // 1000
-            stream('Epoch: %i/%i -- Batch: %i/%i -- Loss: %.3f -- %.2f steps/sec -- Step: %ik ',
+            stream('Epoch: %i/%i -- Batch: %i/%i -- Loss: %.6f -- %.2f steps/sec -- Step: %ik ',
                    (epoch + 1, nb_epochs, i + 1, iters, avg_loss, speed, k))
 
         model.train(False)
@@ -131,7 +137,9 @@ def train(model, dataset, batch_size, learning_rate=0.001, nb_epochs=500):
             X_val, y_val = X.cuda(), y.cuda()
             y_val_hat = model(X_val)
             val_loss += criterion(y_val_hat, y_val).item()
-            avg_val_loss = val_loss/(i+1)
+            avg_val_loss = val_loss / (i + 1)
         val_losses.append(avg_val_loss)
+        train_losses.append(avg_loss)
 
-    model.save()
+    model.save('memory/models/model')
+    return val_losses, train_losses
