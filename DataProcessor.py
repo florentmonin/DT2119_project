@@ -86,12 +86,12 @@ class DataProcessor:
             #os.mkdir(self.MEMORY_FEATURES)
             self.load_audio()
             log("Preprocessing data: audio loaded")
-            log("Preprocessing data: padding audio...")
-            self.pad()
-            log("Preprocessing data: audio padded")
-            log("Preprocessing data: normalizing data...")
-            self.normalize()
-            log("Preprocessing data: data normalized")
+            log("Preprocessing data: padding and normalizing audio...")
+            self.normalize_and_pad()
+            log("Preprocessing data: audio padded and normalized")
+            # log("Preprocessing data: normalizing data...")
+            # self.normalize()
+            # log("Preprocessing data: data normalized")
             log("Preprocessing data: saving data to file...")
             self.save_to_file(preprocessed_data)
             log("Preprocessing data: data saved to file")
@@ -119,7 +119,7 @@ class DataProcessor:
         Word matrices are stored by file (one file is made of a collection of audio files all read by the same speaker,
         and within the same context
         """
-        for speaker in os.scandir(self.audio_path):
+        for speaker in tqdm(os.scandir(self.audio_path)):
             for dir in os.scandir(speaker):
                 for audio_file in os.listdir(dir):
                     if audio_file.endswith('.flac'):
@@ -181,12 +181,14 @@ class DataProcessor:
         """
         np.savez_compressed(preprocessed_data, a2w=self.a2w, w2a=self.w2a, ids=self.ids, max_size = self.AUDIO_MAX_SIZE)
 
-    def normalize(self):
-        """Normalizes the mspec data
+    def normalize_and_pad(self):
+        """Normalizes the mspec data and adds 0s at the end of the 2D matrices for each word
         """
         self.mean /= self.number_processed_word
         self.std = np.sqrt(abs(self.std - self.mean ** 2))
-        for file in os.listdir(self.MEMORY_FEATURES):
+        for file in tqdm(os.listdir(self.MEMORY_FEATURES)):
             tmp = np.load(f"{self.MEMORY_FEATURES}{file}", allow_pickle=True)['word']
             tmp = (tmp - self.mean) / self.std
-            np.savez(f"{self.MEMORY_FEATURES}{file}", word=tmp)
+            padded_audio = np.zeros((self.AUDIO_MAX_SIZE, self.feature_dim), dtype='float32')
+            padded_audio[:tmp.shape[0]] = tmp
+            np.savez(f"{self.MEMORY_FEATURES}{file}", word=padded_audio)

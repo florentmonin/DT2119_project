@@ -1,4 +1,5 @@
 from DataProcessor import *
+import numpy as np
 from Model import *
 from AudioDataset import AudioDataset
 
@@ -9,6 +10,12 @@ FEATURE_DIM = 40
 
 data_processor = DataProcessor(r"light_segmentation", r"data/light_data", "train_data")
 dataset = AudioDataset(data_processor.ids)
-
+log(data_processor.AUDIO_MAX_SIZE)
+log("Loading the model...")
 model = Speech2Vec(data_processor.AUDIO_MAX_SIZE, data_processor.feature_dim, EMBEDDING_SIZE).cuda()
-val_losses, train_losses = train(model, dataset, batch_size=10, nb_epochs=1)
+log("Training the model...")
+val_losses, train_losses = train(model, dataset, batch_size=512, nb_epochs=500)
+log("Saving the losses")
+np.save('val_loss', val_losses)
+np.save('train_loss', train_losses)
+log("Done !")

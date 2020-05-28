@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, random_split
+from DataProcessor import log
 
 
 class Speech2Vec(nn.Module):
@@ -76,7 +77,7 @@ class Speech2Vec(nn.Module):
 
 
 def stream(string, variables):
-    sys.stdout.write(f'\r{string}' % variables)
+    log(f'\r{string}' % variables, file="train.log")
 
 
 def train(model, dataset, batch_size, learning_rate=0.001, nb_epochs=500):
