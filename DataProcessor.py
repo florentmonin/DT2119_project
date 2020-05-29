@@ -83,7 +83,7 @@ class DataProcessor:
             log("Preprocessed data loaded from file")
         else:
             log("Preprocessing data: loading audio...")
-            #os.mkdir(self.MEMORY_FEATURES)
+            # os.mkdir(self.MEMORY_FEATURES)
             self.load_audio()
             log("Preprocessing data: audio loaded")
             log("Preprocessing data: padding and normalizing audio...")
@@ -144,8 +144,14 @@ class DataProcessor:
                 start, end = timestamp
                 word_audio = data[int(start * sample_rate):int(end * sample_rate)]
                 feature_matrix = np.nan_to_num(mspec(word_audio)).astype('float32')
-                self.mean += np.sum(feature_matrix, axis=0)
-                self.std += np.sum(feature_matrix ** 2, axis=0)
+                if self.number_processed_word>0:
+                    self.mean = (self.mean + np.sum(feature_matrix, axis=0) / self.number_processed_word) \
+                                * (self.number_processed_word / (self.number_processed_word + 1))
+                    self.std = (self.std + np.sum(feature_matrix ** 2, axis=0) / self.number_processed_word) \
+                               * (self.number_processed_word / (self.number_processed_word + 1))
+                else:
+                    self.mean = np.sum(feature_matrix, axis=0)
+                    self.std = np.sum(feature_matrix**2, axis=0)
                 np.savez(f"{self.MEMORY_FEATURES}{id}-{i}", word=feature_matrix)
                 self.ids.append(f"{id}-{i}")
                 self.AUDIO_MAX_SIZE = max(self.AUDIO_MAX_SIZE, feature_matrix.shape[0])
@@ -174,14 +180,15 @@ class DataProcessor:
         self.a2w = tmp['a2w'].item()
         self.ids = tmp['ids']
         self.AUDIO_MAX_SIZE = tmp['max_size'].item()
-        self.mean=tmp['mean']
-        self.std=tmp['std']
+        self.mean = tmp['mean']
+        self.std = tmp['std']
 
     def save_to_file(self, preprocessed_data):
         """Saves to the disk the the information about the preprocessed data
         :param preprocessed_data: The name of the .npz where the data will be stored
         """
-        np.savez_compressed(preprocessed_data, a2w=self.a2w, w2a=self.w2a, ids=self.ids, max_size = self.AUDIO_MAX_SIZE,                            mean=self.mean, std=self.std)
+        np.savez_compressed(preprocessed_data, a2w=self.a2w, w2a=self.w2a, ids=self.ids, max_size=self.AUDIO_MAX_SIZE,
+                            mean=self.mean, std=self.std)
 
     def normalize_and_pad(self):
         """Normalizes the mspec data and adds 0s at the end of the 2D matrices for each word
@@ -189,11 +196,6 @@ class DataProcessor:
         log(self.mean)
         log(self.std)
         log("Beggining to normalize and pad")
-        self.mean = self.mean/ self.number_processed_word
-        if np.isnan(np.sum(self.mean)):
-            log(self.number_processed_word)
-            log(self.mean)
-            raise(Exception)
         self.std = np.sqrt(abs(self.std - self.mean ** 2))
         for file in tqdm(os.listdir(self.MEMORY_FEATURES)):
             tmp = np.load(f"{self.MEMORY_FEATURES}{file}", allow_pickle=True)['word']
