@@ -1,4 +1,4 @@
-import sys
+from tqdm import tqdm
 import time
 import torch
 import torch.nn as nn
@@ -175,11 +175,11 @@ def generate_embedding(model, w2a, ids, DATA_PATH, SAVE_PATH):
     :param SAVE_PATH:   Path to save the embedding txt file
     """
     with open(SAVE_PATH, "w+") as saving_file:
-        for word in w2a.keys():
+        for word in tqdm(w2a.keys()):
             temp = []
             for id in w2a[word]:
                 filename = ids[id]
-                corr_audio = np.load(DATA_PATH + filename + '.npz', allow_pickle=True)
+                corr_audio = np.load(DATA_PATH + filename + '.npy', allow_pickle=True)
                 corr_emb = model.generate(corr_audio)
                 temp.append(corr_emb)
             embedding_word = np.mean(temp, axis=0)
