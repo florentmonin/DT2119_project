@@ -143,15 +143,15 @@ class DataProcessor:
             for index, timestamp in enumerate(times):
                 start, end = timestamp
                 word_audio = data[int(start * sample_rate):int(end * sample_rate)]
-                feature_matrix = np.nan_to_num(mspec(word_audio)).astype('float32')
-                if self.number_processed_word>0:
+                feature_matrix = np.nan_to_num(mspec(word_audio), posinf=0., neginf=0.).astype('float32')
+                if self.number_processed_word > 0:
                     self.mean = (self.mean + np.sum(feature_matrix, axis=0) / self.number_processed_word) \
                                 * (self.number_processed_word / (self.number_processed_word + 1))
                     self.std = (self.std + np.sum(feature_matrix ** 2, axis=0) / self.number_processed_word) \
                                * (self.number_processed_word / (self.number_processed_word + 1))
                 else:
                     self.mean = np.sum(feature_matrix, axis=0)
-                    self.std = np.sum(feature_matrix**2, axis=0)
+                    self.std = np.sum(feature_matrix ** 2, axis=0)
                 np.savez(f"{self.MEMORY_FEATURES}{id}-{i}", word=feature_matrix)
                 self.ids.append(f"{id}-{i}")
                 self.AUDIO_MAX_SIZE = max(self.AUDIO_MAX_SIZE, feature_matrix.shape[0])
