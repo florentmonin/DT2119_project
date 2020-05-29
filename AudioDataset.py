@@ -12,11 +12,11 @@ class AudioDataset(Dataset):
 
     def __getitem__(self, index):
         file = self.index2id[index]
-        x = np.load(f'{self.path}{file}.npz')['word']
+        x = np.load(f'{self.path}{file}.npy')
         y = []
         for id in self.context(self.index2id[index]):
             if id is not None:
-                y.append(np.load(f'{self.path}{id}.npz')['word'])
+                y.append(np.load(f'{self.path}{id}.npy'))
             else:
                 y.append(np.zeros(self.shape))
         return x.astype('float32'), np.concatenate(y).astype('float32')
