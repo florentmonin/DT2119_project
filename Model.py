@@ -141,6 +141,6 @@ def train(model, dataset, batch_size, learning_rate=0.001, nb_epochs=500):
             avg_val_loss = val_loss / (i + 1)
         val_losses.append(avg_val_loss)
         train_losses.append(avg_loss)
-
+        model.save('memory/models/model'+str(epoch+1))
     model.save('memory/models/model')
     return val_losses, train_losses

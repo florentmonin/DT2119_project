@@ -193,6 +193,7 @@ class DataProcessor:
     def normalize_and_pad(self):
         """Normalizes the mspec data and adds 0s at the end of the 2D matrices for each word
         """
+        self.ids = np.array(self.ids)
         log(self.mean)
         log(self.std)
         log("Beggining to normalize and pad")
