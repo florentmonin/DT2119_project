@@ -1,11 +1,13 @@
 import os
 import numpy as np
 from DataProcessor import *
+from tqdm import tqdm
 
 data_processor = DataProcessor(r"light_segmentation", r"light_data", "train_data")
 SHAPE = (data_processor.AUDIO_MAX_SIZE, data_processor.feature_dim)
 ids = data_processor.ids
 
+print("Starting to compute targets")
 
 def context(id):
     """Computes the target contexts for the word stored in the file id
@@ -65,9 +67,9 @@ def previous_word(id, ids):
                 return previous_id
 
 
-for file in os.listdir("memory/features"):
+for file in tqdm(os.listdir("memory/features")):
     y = []
-    for id in context(file):
+    for id in context(file[:-4]):
         if id is not None:
             y.append(np.load(f'memory/features/{id}.npy'))
         else:
