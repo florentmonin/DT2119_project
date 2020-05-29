@@ -9,3 +9,5 @@ test.txt
 __pycache__/
 *.log
 memory
+figures
+eval-word-vectors-master
