@@ -121,8 +121,8 @@ def train(model, dataset, batch_size, learning_rate=0.001, nb_epochs=500):
     N = len(dataset)
     train_size = int(N * 0.9)
     train_set, val_set = random_split(dataset, [train_size, N - train_size])
-    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, pin_memory=True)
-    val_loader = DataLoader(val_set, batch_size=batch_size, pin_memory=True)
+    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
+    val_loader = DataLoader(val_set, batch_size=batch_size, num_workers=2, pin_memory=True)
 
     for epoch in range(nb_epochs):
 

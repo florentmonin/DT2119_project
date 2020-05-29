@@ -1,25 +1,21 @@
 from torch.utils.data import Dataset
 import numpy as np
-import os
+import torch
 
 
 class AudioDataset(Dataset):
-    def __init__(self, ids, context_size=3, path="memory/features/", shape=(127, 40)):
-        self.path = path
+    def __init__(self, ids, context_size=3, path="memory/", shape=(127, 40)):
+        self.x_path = path+"features/"
+        self.y_path = path + "targets/"
         self.index2id = ids
         self.context_size = context_size
         self.shape = shape
 
     def __getitem__(self, index):
         file = self.index2id[index]
-        x = np.load(f'{self.path}{file}.npy')
-        y = []
-        for id in self.context(self.index2id[index]):
-            if id is not None:
-                y.append(np.load(f'{self.path}{id}.npy'))
-            else:
-                y.append(np.zeros(self.shape))
-        return x.astype('float32'), np.concatenate(y).astype('float32')
+        x = np.load(f'{self.x_path}{file}.npy')
+        y = np.load(f'{self.y_path}{file}.npy')
+        return torch.FloatTensor(x), torch.FloatTensor(y)
 
     def __len__(self):
         return len(self.index2id)
